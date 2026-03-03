@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Motorola StarTAC Rainbow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Space+Mono:wght@400;700&family=Archivo+Black&display=swap" rel="stylesheet" />
+  <style>
+    /* ════════════════════════════════════════
+       TOKENS
+    ════════════════════════════════════════ */
+    :root {
+      --black:   #0d0d0d;
+      --white:   #f5f0e8;
+      --yellow:  #f5e642;
+      --pink:    #e8184f;
+      --teal:    #00e5c8;
+      --orange:  #ff6b35;
+      --purple:  #c084fc;
+      --blue:    #38bdf8;
+      --border:  3px solid var(--black);
+      --shadow:  5px 5px 0 var(--black);
+      --shadow-lg: 8px 8px 0 var(--black);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: auto; }
+
+    body {
+      background: var(--white);
+      color: var(--black);
+      font-family: 'Space Mono', monospace;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* ════════════════════════════════════════
+       CURSOR
+    ════════════════════════════════════════ */
+    #cur-dot {
+      position: fixed; width: 12px; height: 12px;
+      background: var(--yellow); border: 2px solid var(--black);
+      border-radius: 50%; pointer-events: none; z-index: 9999;
+      transform: translate(-50%,-50%);
+      transition: width .2s, height .2s, background .2s;
+    }
+    #cur-ring {
+      position: fixed; width: 40px; height: 40px;
+      border: 2px solid var(--black);
+      border-radius: 50%; pointer-events: none; z-index: 9998;
+      transform: translate(-50%,-50%);
+      transition: width .25s, height .25s;
+    }
+    body:has(a:hover) #cur-dot,
+    body:has(button:hover) #cur-dot { background: var(--pink); width:16px; height:16px; }
+
+    /* ════════════════════════════════════════
+       LOADER
+    ════════════════════════════════════════ */
+    #loader {
+      position: fixed; inset: 0; background: var(--black);
+      z-index: 2000; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 24px;
+      transition: opacity .8s ease;
+    }
+    #loader.hidden { opacity: 0; pointer-events: none; }
+    .loader-title {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: 36px; letter-spacing: .12em;
+      color: var(--yellow);
+      text-shadow: 4px 4px 0 var(--pink);
+    }
+    .loader-bar-outer {
+      width: 240px; height: 20px;
+      border: 3px solid var(--yellow);
+      background: var(--black);
+      position: relative;
+    }
+    .loader-bar-inner {
+      height: 100%; background: var(--yellow); width: 0%;
+      transition: width .1s linear;
+    }
+    #loader-pct {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px; color: var(--white); letter-spacing: .2em;
+    }
+
+    /* ════════════════════════════════════════
+       NAV
+    ════════════════════════════════════════ */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 300;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 36px;
+      background: var(--yellow);
+      border-bottom: 3px solid var(--black);
+    }
+    .nav-logo {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: 20px; letter-spacing: .15em;
+      color: var(--black);
+    }
+    .nav-logo span { color: var(--pink); text-shadow: 2px 2px 0 var(--black); }
+    .nav-links { display: flex; gap: 0; list-style: none; }
+    .nav-links li { border-left: 3px solid var(--black); }
+    .nav-links li:last-child { border-right: 3px solid var(--black); }
+    .nav-links a {
+      display: block; padding: 8px 20px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--black); text-decoration: none;
+      transition: background .15s;
+    }
+    .nav-links a:hover { background: var(--black); color: var(--yellow); }
+    .nav-cta {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--black); background: var(--pink);
+      border: 3px solid var(--black);
+      padding: 8px 20px; text-decoration: none;
+      box-shadow: var(--shadow);
+      transition: transform .1s, box-shadow .1s;
+      cursor: none;
+    }
+    .nav-cta:hover { transform: translate(-2px,-2px); box-shadow: var(--shadow-lg); }
+
+    /* ════════════════════════════════════════
+       SCROLL HERO
+    ════════════════════════════════════════ */
+    #scroll-section { height: 700vh; position: relative; }
+
+    .sticky-wrap {
+      position: sticky; top: 0; height: 100vh;
+      overflow: hidden; background: var(--black);
+    }
+
+    /* Frame images */
+    .frame-img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      opacity: 0; pointer-events: none;
+    }
+    .frame-img.active { opacity: 1; }
+
+    /* Decorative border frame around hero */
+    .hero-frame {
+      position: absolute; inset: 0; z-index: 4;
+      pointer-events: none;
+      border: 8px solid var(--yellow);
+      box-shadow: inset 0 0 0 4px var(--black);
+    }
+
+    /* Sticker: top-left headline */
+    .hero-sticker-left {
+      position: absolute; left: 36px; top: 50%;
+      transform: translateY(-50%);
+      z-index: 10; pointer-events: none;
+    }
+    .sticker-tag {
+      display: inline-block;
+      background: var(--teal);
+      border: 3px solid var(--black);
+      box-shadow: var(--shadow);
+      padding: 6px 16px;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .2em; text-transform: uppercase;
+      margin-bottom: 14px;
+      opacity: 0; transform: translateX(-20px);
+      transition: opacity .5s, transform .5s;
+    }
+    .hero-h1 {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: clamp(64px, 9vw, 130px);
+      line-height: .9;
+      opacity: 0; transform: translateX(-30px);
+      transition: opacity .7s ease .1s, transform .7s ease .1s;
+    }
+    .hero-h1 .halftone {
+      color: var(--white);
+      -webkit-text-stroke: 0;
+      text-shadow: 5px 5px 0 var(--black);
+    }
+    .hero-h1 .stroke {
+      -webkit-text-stroke: 2px var(--white);
+      color: transparent;
+      text-shadow: 5px 5px 0 var(--pink);
+    }
+    .hero-sub {
+      margin-top: 20px;
+      font-size: 11px; line-height: 1.8;
+      color: var(--white); opacity: 0;
+      max-width: 220px;
+      border-left: 4px solid var(--pink);
+      padding-left: 12px;
+      transform: translateX(-20px);
+      transition: opacity .7s ease .22s, transform .7s ease .22s;
+    }
+    .hero-sticker-left.show .sticker-tag,
+    .hero-sticker-left.show .hero-h1,
+    .hero-sticker-left.show .hero-sub { opacity: 1; transform: translateX(0) translateY(0); }
+
+    /* Sticker: right stats */
+    .hero-sticker-right {
+      position: absolute; right: 36px; top: 50%;
+      transform: translateY(-50%);
+      z-index: 10; pointer-events: none;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .stat-block {
+      background: var(--yellow);
+      border: 3px solid var(--black);
+      box-shadow: var(--shadow);
+      padding: 12px 20px;
+      text-align: right;
+      opacity: 0; transform: translateX(24px);
+      transition: opacity .6s, transform .6s;
+    }
+    .stat-block.show { opacity: 1; transform: translateX(0); }
+    .stat-block .stat-val {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: 36px; line-height: 1;
+      color: var(--black);
+    }
+    .stat-block .stat-val sup { font-size: 18px; color: var(--pink); }
+    .stat-block .stat-lbl {
+      font-size: 9px; letter-spacing: .18em;
+      text-transform: uppercase; color: var(--black); opacity: .7;
+      margin-top: 2px;
+    }
+
+    /* Phase labels — center bottom */
+    .phase-label {
+      position: absolute; bottom: 80px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 10; text-align: center; pointer-events: none;
+      opacity: 0; transition: opacity .4s;
+      white-space: nowrap;
+    }
+    .phase-label.active { opacity: 1; }
+    .phase-label .phase-inner {
+      display: inline-block;
+      background: var(--orange);
+      border: 3px solid var(--black);
+      box-shadow: var(--shadow);
+      padding: 10px 28px;
+    }
+    .phase-label h3 {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: clamp(20px, 2.5vw, 36px);
+      letter-spacing: .06em; color: var(--black);
+    }
+    .phase-label p {
+      font-size: 10px; letter-spacing: .12em;
+      text-transform: uppercase; color: var(--black); opacity: .75;
+      margin-top: 4px;
+    }
+
+    /* Scroll cue */
+    .scroll-cue {
+      position: absolute; bottom: 30px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      transition: opacity .4s;
+    }
+    .scroll-cue .sc-label {
+      background: var(--teal); border: 2px solid var(--black);
+      padding: 4px 12px; font-size: 9px;
+      font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
+    }
+    .scroll-cue .sc-line {
+      width: 2px; height: 44px;
+      background: var(--yellow);
+      transform-origin: top;
+      animation: scScan 1.6s ease-in-out infinite;
+    }
+    @keyframes scScan {
+      0%   { transform: scaleY(0); opacity: 1; }
+      60%  { transform: scaleY(1); opacity: 1; }
+      100% { transform: scaleY(1); opacity: 0; }
+    }
+
+    /* Corner decorations */
+    .corner {
+      position: absolute; z-index: 5; pointer-events: none;
+      font-family: 'Black Ops One', sans-serif;
+      font-size: 10px; letter-spacing: .15em;
+      color: var(--yellow); opacity: .6;
+    }
+    .corner-tl { top: 16px; left: 16px; }
+    .corner-tr { top: 16px; right: 16px; text-align: right; }
+    .corner-br { bottom: 16px; right: 16px; }
+
+    /* ════════════════════════════════════════
+       BELOW FOLD
+    ════════════════════════════════════════ */
+
+    /* ── MARQUEE ── */
+    .marquee-band {
+      background: var(--pink);
+      border-top: 3px solid var(--black);
+      border-bottom: 3px solid var(--black);
+      overflow: hidden; padding: 14px 0;
+    }
+    .marquee-track {
+      display: flex; width: max-content;
+      animation: marquee 18s linear infinite;
+    }
+    .marquee-track span {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: 15px; letter-spacing: .18em;
+      padding: 0 28px; color: var(--black); white-space: nowrap;
+    }
+    .marquee-track span.sep { color: var(--white); }
+    @keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+    /* ── SPECS ── */
+    .specs-section {
+      background: var(--white);
+      padding: 80px 5vw;
+    }
+    .section-heading {
+      display: flex; align-items: flex-start; gap: 24px;
+      margin-bottom: 56px;
+    }
+    .section-heading .tag {
+      background: var(--teal); border: 3px solid var(--black);
+      box-shadow: var(--shadow);
+      padding: 6px 16px; font-size: 10px;
+      font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
+      white-space: nowrap; margin-top: 10px;
+    }
+    .section-heading h2 {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: clamp(48px, 7vw, 100px);
+      line-height: .88; letter-spacing: .02em;
+      text-shadow: 4px 4px 0 var(--yellow);
+    }
+
+    .specs-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      border: 3px solid var(--black);
+    }
+    .spec-card {
+      border-right: 3px solid var(--black);
+      padding: 36px 28px;
+      position: relative; overflow: hidden;
+      cursor: none;
+      transition: background .2s;
+    }
+    .spec-card:last-child { border-right: none; }
+    .spec-card:hover { background: var(--yellow); }
+    .spec-card .card-num {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: 60px; line-height: 1; color: var(--black);
+    }
+    .spec-card .card-num sup { font-size: 24px; color: var(--pink); }
+    .spec-card .card-lbl {
+      font-size: 9px; font-weight: 700; letter-spacing: .2em;
+      text-transform: uppercase; color: var(--black); opacity: .55;
+      margin-top: 8px;
+    }
+    .spec-card .card-desc {
+      font-size: 11px; line-height: 1.8;
+      color: var(--black); opacity: .75;
+      margin-top: 14px;
+    }
+    .spec-card .card-icon {
+      position: absolute; top: 16px; right: 16px;
+      font-size: 28px; opacity: .15;
+    }
+
+    /* ── FEATURES ── */
+    .features-section {
+      background: var(--black);
+      padding: 80px 5vw;
+    }
+    .features-section .section-heading h2 { color: var(--white); text-shadow: 4px 4px 0 var(--pink); }
+    .features-section .section-heading .tag { background: var(--purple); }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0;
+      border: 3px solid var(--white);
+    }
+    .feat-card {
+      border-right: 3px solid var(--white);
+      padding: 40px 32px;
+      cursor: none;
+      transition: background .2s;
+      position: relative;
+    }
+    .feat-card:last-child { border-right: none; }
+    .feat-card:hover { background: #1a1a1a; }
+    .feat-card::before {
+      content: '';
+      display: block;
+      width: 100%; height: 3px;
+      margin-bottom: 28px;
+    }
+    .feat-card:nth-child(1)::before { background: var(--teal); }
+    .feat-card:nth-child(2)::before { background: var(--pink); }
+    .feat-card:nth-child(3)::before { background: var(--yellow); }
+    .feat-card .feat-num {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: 64px; line-height: 1; color: #222;
+      position: absolute; top: 16px; right: 20px;
+    }
+    .feat-card h3 {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: clamp(22px, 2.5vw, 34px);
+      letter-spacing: .04em; color: var(--white);
+      margin-bottom: 16px;
+    }
+    .feat-card p {
+      font-size: 12px; line-height: 1.9;
+      color: rgba(245,240,232,.6);
+    }
+    .feat-badge {
+      display: inline-block;
+      margin-top: 20px;
+      background: transparent;
+      border: 2px solid;
+      padding: 5px 14px;
+      font-size: 9px; font-weight: 700;
+      letter-spacing: .2em; text-transform: uppercase;
+    }
+    .feat-card:nth-child(1) .feat-badge { border-color: var(--teal); color: var(--teal); }
+    .feat-card:nth-child(2) .feat-badge { border-color: var(--pink); color: var(--pink); }
+    .feat-card:nth-child(3) .feat-badge { border-color: var(--yellow); color: var(--yellow); }
+
+    /* ── CTA ── */
+    .cta-section {
+      background: var(--yellow);
+      border-top: 3px solid var(--black);
+      border-bottom: 3px solid var(--black);
+      padding: 72px 5vw;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 40px;
+    }
+    .cta-section h2 {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: clamp(40px, 6vw, 88px);
+      line-height: .88; letter-spacing: .02em;
+      text-shadow: 5px 5px 0 var(--pink);
+    }
+    .cta-section h2 em { font-style: normal; color: var(--black); }
+    .cta-buttons { display: flex; flex-direction: column; gap: 12px; }
+    .btn-primary {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px; font-weight: 700;
+      letter-spacing: .14em; text-transform: uppercase;
+      color: var(--white); background: var(--black);
+      border: 3px solid var(--black);
+      padding: 14px 32px; text-decoration: none;
+      box-shadow: var(--shadow);
+      display: inline-flex; align-items: center; gap: 12px;
+      cursor: none;
+      transition: transform .12s, box-shadow .12s;
+    }
+    .btn-primary:hover { transform: translate(-3px,-3px); box-shadow: var(--shadow-lg); }
+    .btn-secondary {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px; font-weight: 700;
+      letter-spacing: .14em; text-transform: uppercase;
+      color: var(--black); background: transparent;
+      border: 3px solid var(--black);
+      padding: 14px 32px; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 12px;
+      cursor: none;
+      transition: background .15s;
+    }
+    .btn-secondary:hover { background: rgba(0,0,0,.08); }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--black);
+      border-top: 3px solid var(--yellow);
+      padding: 40px 5vw;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .footer-logo {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: 22px; letter-spacing: .2em;
+      color: var(--yellow);
+    }
+    .footer-logo span { color: var(--pink); }
+    footer .footer-copy {
+      font-size: 10px; letter-spacing: .12em;
+      color: rgba(245,240,232,.4);
+    }
+
+    /* ── SCROLLED PROGRESS ── */
+    #pg-bar {
+      position: fixed; top: 0; left: 0;
+      height: 4px; width: 0%;
+      background: var(--pink);
+      z-index: 400;
+      border-right: 2px solid var(--black);
+    }
+
+    /* ── RETRO DECORATIONS ── */
+    .deco-star {
+      display: inline-block;
+      animation: spin 6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .zigzag-divider {
+      width: 100%; height: 20px;
+      background:
+        linear-gradient(135deg, var(--black) 25%, transparent 25%) -20px 0,
+        linear-gradient(225deg, var(--black) 25%, transparent 25%) -20px 0,
+        linear-gradient(315deg, var(--black) 25%, transparent 25%),
+        linear-gradient(45deg,  var(--black) 25%, transparent 25%);
+      background-size: 40px 20px;
+      background-color: var(--yellow);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media(max-width:900px){
+      nav { padding: 12px 20px; }
+      .nav-links { display: none; }
+      .hero-sticker-right { display: none; }
+      .specs-grid { grid-template-columns: repeat(2,1fr); }
+      .spec-card { border-bottom: 3px solid var(--black); }
+      .feature-grid { grid-template-columns: 1fr; }
+      .feat-card { border-right: none; border-bottom: 3px solid var(--white); }
+      .cta-section { grid-template-columns: 1fr; }
+    }
+    @media(max-width:560px){
+      .specs-grid { grid-template-columns: 1fr; }
+      footer { flex-direction: column; gap: 16px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-title">MOTOROLA ★</div>
+  <div class="loader-bar-outer"><div class="loader-bar-inner" id="ldrFill"></div></div>
+  <div id="loader-pct">LOADING — 0%</div>
+</div>
+
+<!-- CURSORS -->
+<div id="cur-dot"></div>
+<div id="cur-ring"></div>
+
+<!-- PROGRESS BAR -->
+<div id="pg-bar"></div>
+
+<!-- ════════ NAV ════════ -->
+<nav>
+  <div class="nav-logo">STAR<span>TAC</span> RAINBOW</div>
+  <ul class="nav-links">
+    <li><a href="#">Design</a></li>
+    <li><a href="#">Network</a></li>
+    <li><a href="#">Battery</a></li>
+    <li><a href="#">Legacy</a></li>
+  </ul>
+  <a href="#" class="nav-cta">★ Get One</a>
+</nav>
+
+<!-- ════════ SCROLL HERO ════════ -->
+<section id="scroll-section">
+  <div class="sticky-wrap" id="stage">
+
+    <!-- frames injected by JS -->
+
+    <!-- yellow border frame -->
+    <div class="hero-frame"></div>
+
+    <!-- corner labels -->
+    <div class="corner corner-tl">STARTAC RAINBOW ★ 1997</div>
+    <div class="corner corner-tr">FRAME <span id="frameNum">000</span> / 191</div>
+    <div class="corner corner-br">★ GSM 900 · CLAMSHELL ★</div>
+
+    <!-- Left headline sticker -->
+    <div class="hero-sticker-left" id="heroLeft">
+      <div class="sticker-tag">★ Since 1997 ★</div>
+      <h1 class="hero-h1"><span class="halftone">STAR</span><br/><span class="stroke">TAC 🌈</span></h1>
+      <p class="hero-sub">The Rainbow edition.<br/>112g of pure colour.<br/>The OG flip phone.</p>
+    </div>
+
+    <!-- Right stat stickers -->
+    <div class="hero-sticker-right">
+      <div class="stat-block" id="st0">
+        <div class="stat-val">112<sup>g</sup></div>
+        <div class="stat-lbl">Weight</div>
+      </div>
+      <div class="stat-block" id="st1">
+        <div class="stat-val">500<sup>mAh</sup></div>
+        <div class="stat-lbl">NiMH Battery</div>
+      </div>
+      <div class="stat-block" id="st2">
+        <div class="stat-val">120<sup>min</sup></div>
+        <div class="stat-lbl">Talk Time</div>
+      </div>
+    </div>
+
+    <!-- Phase labels -->
+    <div class="phase-label" id="ph0">
+      <div class="phase-inner">
+        <h3>★ RAINBOW CLAMSHELL</h3>
+        <p>98 × 57 × 23mm · Mini-SIM</p>
+      </div>
+    </div>
+    <div class="phase-label" id="ph1">
+      <div class="phase-inner" style="background:var(--teal)">
+        <h3>★ GSM 900 NETWORK</h3>
+        <p>2G · SMS · 16 Languages</p>
+      </div>
+    </div>
+    <div class="phase-label" id="ph2">
+      <div class="phase-inner" style="background:var(--pink)">
+        <h3>★ 40H STANDBY</h3>
+        <p>NiMH 500mAh · Removable</p>
+      </div>
+    </div>
+
+    <!-- Scroll cue -->
+    <div class="scroll-cue" id="scrollCue">
+      <div class="sc-label">↓ Scroll ↓</div>
+      <div class="sc-line"></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ════════ MARQUEE ════════ -->
+<div class="marquee-band">
+  <div class="marquee-track" id="mqTrack"></div>
+</div>
+
+<!-- ════════ SPECS ════════ -->
+<section class="specs-section">
+  <div class="section-heading">
+    <div class="tag"><span class="deco-star">★</span> Tech Specs</div>
+    <h2>NUMBERS<br/>THAT HIT<br/>(IN 1997)</h2>
+  </div>
+  <div class="specs-grid">
+    <div class="spec-card">
+      <span class="card-icon">📟</span>
+      <div class="card-num">2<sup>×12</sup></div>
+      <div class="card-lbl">Display</div>
+      <div class="card-desc">Alphanumeric · 2 rows × 12 chars · Fixed icons · No colour, no backlight.</div>
+    </div>
+    <div class="spec-card">
+      <span class="card-icon">⚖️</span>
+      <div class="card-num">112<sup>g</sup></div>
+      <div class="card-lbl">Weight</div>
+      <div class="card-desc">98 × 57 × 23mm body · Mini-SIM (2FF) · Multi-coloured rainbow clamshell.</div>
+    </div>
+    <div class="spec-card">
+      <span class="card-icon">🔋</span>
+      <div class="card-num">500<sup>mAh</sup></div>
+      <div class="card-lbl">Battery</div>
+      <div class="card-desc">Removable NiMH · 40h standby · 120min talk time · No wireless charging.</div>
+    </div>
+    <div class="spec-card" style="border-right:none">
+      <span class="card-icon">📡</span>
+      <div class="card-num">2<sup>G</sup></div>
+      <div class="card-lbl">Network</div>
+      <div class="card-desc">GSM 900 · No GPRS · SMS only · No Bluetooth · No Wi-Fi · No GPS.</div>
+    </div>
+  </div>
+</section>
+
+<div class="zigzag-divider"></div>
+
+<!-- ════════ FEATURES ════════ -->
+<section class="features-section">
+  <div class="section-heading">
+    <div class="tag" style="background:var(--purple)"><span class="deco-star">★</span> Features</div>
+    <h2>BUILT FOR<br/>1998</h2>
+  </div>
+  <div class="feature-grid">
+    <div class="feat-card">
+      <div class="feat-num">01</div>
+      <h3>RAINBOW<br/>CLAMSHELL</h3>
+      <p>The multi-coloured edition of the iconic StarTAC 70. Snap it open to answer, snap it shut to hang up. Bold colours, bold statement — like no other phone of its era.</p>
+      <span class="feat-badge">Form Factor</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-num">02</div>
+      <h3>100-ENTRY<br/>PHONEBOOK</h3>
+      <p>Store up to 100 contacts on the device. Track 10 dialled, 5 received, and 5 missed calls. SMS messaging and 16-language support included.</p>
+      <span class="feat-badge">Memory</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-num">03</div>
+      <h3>MONOPHONIC<br/>RINGTONES</h3>
+      <p>Monophonic ringtones, no loudspeaker, no alarm, no clock, no games, no Java. Pure, distilled calling machine. GSM 900, nothing more, nothing less.</p>
+      <span class="feat-badge">Keep It Simple</span>
+    </div>
+  </div>
+</section>
+
+<div class="zigzag-divider" style="transform:scaleX(-1); background-color: var(--black);"></div>
+
+<!-- ════════ CTA ════════ -->
+<section class="cta-section">
+  <h2>READY TO<br/>FLIP THE <em>FUTURE?</em></h2>
+  <div class="cta-buttons">
+    <a href="#" class="btn-primary">
+      ★ Get StarTAC Rainbow
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+    <a href="#" class="btn-secondary">
+      ↗ Full Specs
+    </a>
+  </div>
+</section>
+
+<!-- ════════ FOOTER ════════ -->
+<footer>
+  <div class="footer-logo">STAR<span>TAC</span> RAINBOW</div>
+  <div class="footer-copy">© 2025 Motorola Mobility LLC. All rights reserved.</div>
+  <div class="footer-copy">Privacy · Legal · Cookies</div>
+</footer>
+
+<!-- ════════════════════════════════════════
+     JS ENGINE
+════════════════════════════════════════ -->
+<script>
+(function(){
+
+  const TOTAL  = 192;
+  const PHASES = [[35,85],[86,140],[141,182]];
+
+  function frameUrl(i){
+    return 'https://github.com/atwadux-crypto/motorola-scroll-website/blob/master/Motorla%20images/frame_'
+      + String(i).padStart(3,'0') + '_delay-0.041s.jpg?raw=true';
+  }
+
+  // ── DOM ──────────────────────────────────────────────────
+  const stage    = document.getElementById('stage');
+  const vignette = stage.querySelector('.hero-frame');
+  const ldrFill  = document.getElementById('ldrFill');
+  const ldrPct   = document.getElementById('loader-pct');
+  const loader   = document.getElementById('loader');
+  const heroLeft = document.getElementById('heroLeft');
+  const scrollCue= document.getElementById('scrollCue');
+  const frameNum = document.getElementById('frameNum');
+  const pgBar    = document.getElementById('pg-bar');
+  const phaseEls = [0,1,2].map(i=>document.getElementById('ph'+i));
+  const statEls  = [0,1,2].map(i=>document.getElementById('st'+i));
+  const scrollSec= document.getElementById('scroll-section');
+
+  // ── CREATE IMG ELEMENTS ───────────────────────────────────
+  const imgEls = [];
+  for(let i=0; i<TOTAL; i++){
+    const img = document.createElement('img');
+    img.className = 'frame-img';
+    img.decoding  = 'async';
+    stage.insertBefore(img, stage.firstChild);
+    imgEls.push(img);
+  }
+
+  // ── STATE ─────────────────────────────────────────────────
+  let ldCount=0, failCount=0, curFrame=0;
+  const ready = new Array(TOTAL).fill(false);
+
+  // ── LOAD ──────────────────────────────────────────────────
+  const BATCH = 8;
+  let nextLoad = 0;
+
+  function loadNext(){
+    if(nextLoad>=TOTAL) return;
+    const i = nextLoad++;
+    const img = imgEls[i];
+    img.onload = ()=>{
+      ready[i]=true; ldCount++;
+      const pct = Math.round(ldCount/TOTAL*100);
+      ldrFill.style.width = pct+'%';
+      ldrPct.textContent  = 'LOADING — '+pct+'%';
+      if(i===0){ img.classList.add('active'); curFrame=0; }
+      if(ldCount+failCount>=TOTAL) onDone();
+      else loadNext();
+    };
+    img.onerror = ()=>{
+      failCount++;
+      if(ldCount+failCount>=TOTAL) onDone();
+      else loadNext();
+    };
+    img.src = frameUrl(i);
+  }
+  for(let b=0;b<BATCH;b++) loadNext();
+
+  function onDone(){
+    setTimeout(()=>{
+      loader.classList.add('hidden');
+      setTimeout(()=>loader.remove(), 900);
+      heroLeft.classList.add('show');
+      statEls.forEach((el,i)=>setTimeout(()=>el.classList.add('show'), i*150));
+    }, 300);
+  }
+
+  // ── SCROLL ────────────────────────────────────────────────
+  window.addEventListener('scroll', onScroll, {passive:true});
+
+  function onScroll(){
+    const sy  = window.scrollY;
+    const max = scrollSec.offsetHeight - window.innerHeight;
+    const p   = Math.min(Math.max(sy/max,0),1);
+
+    pgBar.style.width = (sy/(document.body.scrollHeight-window.innerHeight)*100)+'%';
+
+    let target = Math.min(Math.round(p*(TOTAL-1)), TOTAL-1);
+    if(!ready[target]){
+      for(let d=1;d<=target;d++){
+        if(ready[target-d]){ target=target-d; break; }
+      }
+    }
+
+    if(target!==curFrame){
+      imgEls[curFrame].classList.remove('active');
+      curFrame=target;
+      if(ready[curFrame]) imgEls[curFrame].classList.add('active');
+      frameNum.textContent = String(curFrame).padStart(3,'0');
+    }
+
+    scrollCue.style.opacity = p>.02 ? '0' : '1';
+
+    if(p<.07)      { heroLeft.classList.add('show');    statEls.forEach(e=>e.classList.add('show')); }
+    else if(p>.16) { heroLeft.classList.remove('show'); statEls.forEach(e=>e.classList.remove('show')); }
+
+    phaseEls.forEach((el,i)=>{
+      const[s,e]=PHASES[i];
+      el.classList.toggle('active', curFrame>=s && curFrame<=e);
+    });
+  }
+
+  // ── MARQUEE ───────────────────────────────────────────────
+  const words = ['STARTAC RAINBOW','★','112 GRAMS','★','500mAh NiMH','★',
+    '120MIN TALK','★','40H STANDBY','★','GSM 900','★','SINCE 1997','★',
+    'STARTAC RAINBOW','★','112 GRAMS','★','500mAh NiMH','★',
+    '120MIN TALK','★','40H STANDBY','★','GSM 900','★','SINCE 1997','★'];
+  const track = document.getElementById('mqTrack');
+  [...words,...words].forEach(w=>{
+    const s=document.createElement('span');
+    s.textContent=w;
+    if(w==='★') s.classList.add('sep');
+    track.appendChild(s);
+  });
+
+  // ── CURSOR ────────────────────────────────────────────────
+  const dot  = document.getElementById('cur-dot');
+  const ring = document.getElementById('cur-ring');
+  let mx=-100,my=-100,rx=-100,ry=-100;
+  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+  (function tick(){
+    rx+=(mx-rx)*.13; ry+=(my-ry)*.13;
+    dot.style.left  = mx+'px'; dot.style.top  = my+'px';
+    ring.style.left = Math.round(rx)+'px'; ring.style.top = Math.round(ry)+'px';
+    requestAnimationFrame(tick);
+  })();
+  document.querySelectorAll('a,button,.spec-card,.feat-card').forEach(el=>{
+    el.addEventListener('mouseenter',()=>{ring.style.width='54px';ring.style.height='54px';});
+    el.addEventListener('mouseleave',()=>{ring.style.width='';ring.style.height='';});
+  });
+
+})();
+</script>
+</body>
+</html>
